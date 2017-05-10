@@ -1,0 +1,61 @@
+memo = "33b7389305bb154fa097e7509feafea3faab94d25812440a4546ef97b46b9b66"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/alecthomas/log4go"
+  packages = ["."]
+  revision = "18d87da5025a6e8bd58dede5ecffe3f62115bc4f"
+
+[[projects]]
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  revision = "3ab3a8b8831546bd18fd182c20687ca853b2bb13"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "github.com/joho/godotenv"
+  packages = ["."]
+  revision = "726cc8b906e3d31c70a9671c90a13716a8d3f50d"
+  version = "v1.1"
+
+[[projects]]
+  name = "github.com/mattermost/platform"
+  packages = ["model"]
+  revision = "dd1db760e378d2df7a52976e812f77f54f85c2c0"
+  version = "v3.8.2"
+
+[[projects]]
+  name = "github.com/nicksnyder/go-i18n"
+  packages = ["i18n","i18n/bundle","i18n/language","i18n/translation"]
+  revision = "fed5740db6b83ee8ba7c1b07ff063115bc6f4b96"
+  version = "v1.8.0"
+
+[[projects]]
+  name = "github.com/pborman/uuid"
+  packages = ["."]
+  revision = "a97ce2ca70fa5a848076093f05e639a89ca34d06"
+  version = "v1.0"
+
+[[projects]]
+  name = "github.com/pelletier/go-buffruneio"
+  packages = ["."]
+  revision = "c37440a7cf42ac63b919c752ca73a85067e05992"
+  version = "v0.2.0"
+
+[[projects]]
+  name = "github.com/pelletier/go-toml"
+  packages = ["."]
+  revision = "13d49d4606eb801b8f01ae542b4afc4c6ee3d84a"
+  version = "v0.5.0"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+  packages = ["bcrypt","blowfish"]
+  revision = "122d919ec1efcfb58483215da23f815853e24b81"
+
+[[projects]]
+  branch = "v2"
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  revision = "cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b"
