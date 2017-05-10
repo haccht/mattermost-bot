@@ -1,0 +1,54 @@
+hash: 6ee02e8fe72c497d6ebebc815d8fec3dc0060d0ea0cb162b6b81515dd2be51e1
+updated: 2017-05-16T09:12:59.818327373+09:00
+imports:
+- name: github.com/alecthomas/log4go
+  version: 3fbce08846379ec7f4f6bc7fce6dd01ce28fae4c
+  repo: https://github.com/mattermost/log4go.git
+- name: github.com/golang/snappy
+  version: 553a641470496b2327abcac10b36396bd98e45c9
+- name: github.com/gorilla/websocket
+  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+- name: github.com/joho/godotenv
+  version: 325433c502d409f3c3dc820098fb0cfe38d98dc7
+- name: github.com/mattermost/platform
+  version: 0a20e8d3269515e2d44a0bcad0a2408f62245814
+  subpackages:
+  - model
+- name: github.com/nicksnyder/go-i18n
+  version: fed5740db6b83ee8ba7c1b07ff063115bc6f4b96
+  subpackages:
+  - i18n
+  - i18n/bundle
+  - i18n/language
+  - i18n/translation
+- name: github.com/pborman/uuid
+  version: a97ce2ca70fa5a848076093f05e639a89ca34d06
+- name: github.com/pelletier/go-buffruneio
+  version: c37440a7cf42ac63b919c752ca73a85067e05992
+- name: github.com/pelletier/go-toml
+  version: 685a1f1cb7a66b9cadbe8f1ac49d9f8f567d6a9d
+- name: github.com/robfig/cron
+  version: df38d32658d8788cd446ba74db4bb5375c4b0cb3
+- name: github.com/syndtr/goleveldb
+  version: 8c81ea47d4c41a385645e133e15510fc6a2a74b4
+  subpackages:
+  - leveldb
+  - leveldb/cache
+  - leveldb/comparer
+  - leveldb/errors
+  - leveldb/filter
+  - leveldb/iterator
+  - leveldb/journal
+  - leveldb/memdb
+  - leveldb/opt
+  - leveldb/storage
+  - leveldb/table
+  - leveldb/util
+- name: golang.org/x/crypto
+  version: ab89591268e0c8b748cbe4047b00197516011af5
+  subpackages:
+  - bcrypt
+  - blowfish
+- name: gopkg.in/yaml.v2
+  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
+testImports: []

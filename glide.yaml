@@ -1,0 +1,10 @@
+package: mattermost-bot
+import:
+- package: github.com/joho/godotenv
+- package: github.com/mattermost/platform
+  subpackages:
+  - model
+- package: github.com/syndtr/goleveldb
+  subpackages:
+  - leveldb
+  - leveldb/util
