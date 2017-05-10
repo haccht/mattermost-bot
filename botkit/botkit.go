@@ -1,6 +1,7 @@
 package botkit
 
 import (
+	"encoding/json"
 	"log"
 	"net/url"
 	"os"
@@ -16,6 +17,7 @@ type Bot struct {
 	adaptor map[string][]BotPlugin
 	User    *model.User
 	Team    *model.Team
+	Webhook string
 }
 
 type BotPlugin interface {
@@ -67,9 +69,18 @@ func NewBot(endpoint, account, password, teamname string) *Bot {
 	return b
 }
 
-func (b *Bot) Say(post *model.Post) {
-	if _, err := b.client.CreatePost(post); err != nil {
-		log.Printf("Failed to send a message to the channel: %v\n", err.Error())
+func (b *Bot) Say(m map[string]string) {
+	if b.Webhook == nil {
+		rawdata := map[string]string{"payload": m}
+		payload := json.Marshal(rawdata)
+
+		if _, err := b.client.PostWebhook(b.Webhook, m.ToJson); err != nil {
+			log.Printf("Failed to send a message: %v\n", err.Error())
+		}
+	} else {
+		if _, err := b.client.CreatePost(post); err != nil {
+			log.Printf("Failed to send a message: %v\n", err.Error())
+		}
 	}
 }
 
@@ -80,7 +91,7 @@ func (b *Bot) Listen() {
 	// Lets start listening to some channels via the websocket!
 	wsClient, err := model.NewWebSocketClient(wsUrl.String(), b.client.AuthToken)
 	if err != nil {
-		log.Fatalf("We failed to connect to the websocket: %v\n", err.Error())
+		log.Fatalf("Failed to connect to the websocket: %v\n", err.Error())
 	}
 
 	wsClient.Listen()
