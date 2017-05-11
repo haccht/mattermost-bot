@@ -1,10 +1,16 @@
-memo = "bd41a44851717738359aed29ed83bfb5675c6a4c4b3edde266d3111c6ccc6fc5"
+memo = "59a3a60c9a39422dca773bc14fff07f5e118025d78bccb2d1e5b2be04e68f179"
 
 [[projects]]
   branch = "master"
   name = "github.com/alecthomas/log4go"
   packages = ["."]
   revision = "18d87da5025a6e8bd58dede5ecffe3f62115bc4f"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/golang/snappy"
+  packages = ["."]
+  revision = "553a641470496b2327abcac10b36396bd98e45c9"
 
 [[projects]]
   name = "github.com/gorilla/websocket"
@@ -53,6 +59,12 @@ memo = "bd41a44851717738359aed29ed83bfb5675c6a4c4b3edde266d3111c6ccc6fc5"
   packages = ["."]
   revision = "b024fc5ea0e34bc3f83d9941c8d60b0622bfaca4"
   version = "v1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/syndtr/goleveldb"
+  packages = ["leveldb","leveldb/cache","leveldb/comparer","leveldb/errors","leveldb/filter","leveldb/iterator","leveldb/journal","leveldb/memdb","leveldb/opt","leveldb/storage","leveldb/table","leveldb/util"]
+  revision = "8c81ea47d4c41a385645e133e15510fc6a2a74b4"
 
 [[projects]]
   branch = "master"

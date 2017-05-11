@@ -8,12 +8,12 @@ import (
 )
 
 type PingAdaptor struct {
-	bot         *botkit.Bot
-	channelName string
+	bot          *botkit.MMBot
+	channelNames []string
 }
 
-func NewPingAdaptor(bot *botkit.Bot, channelName string) (botkit.BotInterface, error) {
-	a := &PingAdaptor{bot, channelName}
+func NewPingAdaptor(bot *botkit.MMBot, channelNames []string) (botkit.MMBotInterface, error) {
+	a := &PingAdaptor{bot, channelNames}
 
 	// you may schedule a job to execute
 	/*
@@ -35,7 +35,7 @@ func (a *PingAdaptor) Reply(post *botkit.Post) error {
 	if re.MatchString(post.Message) {
 		new_post := map[string]string{
 			"username": a.bot.User.Username,
-			"channel":  a.channelName,
+			"channel":  a.channelNames,
 			"text":     "PONG",
 		}
 

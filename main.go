@@ -20,14 +20,22 @@ func main() {
 	teamname := os.Getenv("MMBOT_TEAMNAME")
 	endpoint := os.Getenv("MMBOT_ENDPOINT")
 
-	bot := botkit.NewBot(endpoint, account, password, teamname)
+	bot := botkit.NewMMBot(endpoint, account, password, teamname)
 	bot.WebhookId = os.Getenv("MMBOT_WEBHOOK")
 
-	if adaptor, _ := plugins.NewPingAdaptor(bot, "bot_dev"); adaptor != nil {
+	if adaptor, _ := plugins.NewPingAdaptor(bot, "Bot_dev"); adaptor != nil {
 		bot.Register(adaptor)
 	}
 
 	if adaptor, _ := plugins.NewPingAdaptor(bot, "off-topic"); adaptor != nil {
+		bot.Register(adaptor)
+	}
+
+	if adaptor, _ := plugins.NewRosterAdaptor(bot, "Bot_dev"); adaptor != nil {
+		bot.Register(adaptor)
+	}
+
+	if adaptor, _ := plugins.NewRosterAdaptor(bot, "magi-TOUBAN"); adaptor != nil {
 		bot.Register(adaptor)
 	}
 

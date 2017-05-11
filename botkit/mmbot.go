@@ -13,26 +13,30 @@ import (
 	"github.com/robfig/cron"
 )
 
-type Bot struct {
-	client    *model.Client
-	adaptors  map[string][]BotInterface
-	Cron      *cron.Cron
-	User      *model.User
-	Team      *model.Team
-	WebhookId string
-}
+type MMBot struct {
+	client   *model.Client
+	adaptors map[string][]MMBotInterface
 
-type BotInterface interface {
-	Reply(*Post) error
-	ChannelName() string
+	Brain     *Brain
+	Cron      *cron.Cron
+	Team      *model.Team
+	User      *model.User
+	WebhookId string
 }
 
 type Post model.Post
 
-func NewBot(endpoint, account, password, teamname string) *Bot {
-	b := new(Bot)
+type MMBotInterface interface {
+	Reply(*Post) error
+	ChannelName() string
+}
+
+func NewMMBot(endpoint, account, password, teamname string) *MMBot {
+	b := new(MMBot)
 	b.client = model.NewClient(endpoint)
-	b.adaptors = map[string][]BotInterface{}
+	b.adaptors = map[string][]MMBotInterface{}
+
+	b.Brain, _ = NewBrain()
 	b.Cron = cron.New()
 
 	if props, err := b.client.GetPing(); err != nil {
@@ -69,7 +73,7 @@ func NewBot(endpoint, account, password, teamname string) *Bot {
 	return b
 }
 
-func (b *Bot) Post(post *Post) error {
+func (b *MMBot) Post(post *Post) error {
 	new_post := (*model.Post)(post)
 	if _, err := b.client.CreatePost(new_post); err != nil {
 		log.Printf("Failed to send a message: %v\n", err.Error())
@@ -79,7 +83,7 @@ func (b *Bot) Post(post *Post) error {
 	return nil
 }
 
-func (b *Bot) PostToWebhook(json string) error {
+func (b *MMBot) PostToWebhook(json string) error {
 	if b.WebhookId == "" {
 		return fmt.Errorf("Incoming webhook ID has not been set.")
 	}
@@ -93,7 +97,7 @@ func (b *Bot) PostToWebhook(json string) error {
 	return nil
 }
 
-func (b *Bot) Listen() {
+func (b *MMBot) Listen() {
 	wsUrl, _ := url.Parse(b.client.Url)
 	wsUrl.Scheme = "ws"
 
@@ -135,7 +139,7 @@ func (b *Bot) Listen() {
 	<-close
 }
 
-func (b *Bot) Register(adaptor BotInterface) {
+func (b *MMBot) Register(adaptor MMBotInterface) {
 	channelName := strings.ToLower(adaptor.ChannelName())
 	if channelResult, err := b.client.GetChannelByName(channelName); err != nil {
 		log.Fatalf("Couldn't get channel '%s': %v\n", channelName, err.Error())
@@ -146,7 +150,7 @@ func (b *Bot) Register(adaptor BotInterface) {
 	}
 }
 
-func (b *Bot) handleWebsocket(event *model.WebSocketEvent) {
+func (b *MMBot) handleWebsocket(event *model.WebSocketEvent) {
 	if event.Event != model.WEBSOCKET_EVENT_POSTED {
 		return
 	}
@@ -161,7 +165,7 @@ func (b *Bot) handleWebsocket(event *model.WebSocketEvent) {
 		if channelId == post.ChannelId {
 			for _, adaptor := range adaptors {
 				wg.Add(1)
-				go func(post *model.Post, adaptor BotInterface) {
+				go func(post *model.Post, adaptor MMBotInterface) {
 					defer wg.Done()
 
 					err := adaptor.Reply((*Post)(post))
