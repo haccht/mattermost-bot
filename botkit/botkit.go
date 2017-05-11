@@ -173,8 +173,6 @@ func (b *Bot) handleWebsocket(event *model.WebSocketEvent) {
 		}
 	*/
 
-	fmt.Println(post.ToJson())
-
 	var wg sync.WaitGroup
 
 	// Process the post with each adaptors
