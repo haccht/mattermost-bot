@@ -35,29 +35,23 @@ func NewBot(endpoint, account, password, teamname string) *Bot {
 	b.adaptors = map[string][]BotInterface{}
 	b.Cron = cron.New()
 
-	// Ping the server to make sure we can connect.
 	if props, err := b.client.GetPing(); err != nil {
-		log.Fatalf("There was a problem pinging the Mattermost server.  Are you sure it's running?: %v\n", err.Error())
+		log.Fatalf("There was a problem pinging the Mattermost server '%s': %v\n", endpoint, err.Error())
 	} else {
 		log.Printf("Server detected and is running version %s\n", props["version"])
 	}
 
-	// lets attempt to login to the Mattermost server as the bot user
-	// This will set the token required for all future calls
-	// You can get this token with client.AuthToken
 	if loginResult, err := b.client.Login(account, password); err != nil {
-		log.Fatalf("There was a problem logging into the Mattermost server.  Are you sure ran the setup steps from the README.md?: %v\n", err.Error())
+		log.Fatalf("There was a problem logging into the Mattermost server: %v\n", err.Error())
 	} else {
 		b.User = loginResult.Data.(*model.User)
 	}
 
-	// Lets load all the stuff we might need
 	if initialLoadResults, err := b.client.GetInitialLoad(); err != nil {
 		log.Fatalf("We failed to get the initial load: %v\n", err.Error())
 	} else {
 		initialLoad := initialLoadResults.Data.(*model.InitialLoad)
 
-		// Lets find our bot team
 		for _, team := range initialLoad.Teams {
 			if team.Name == teamname {
 				b.Team = team
@@ -87,12 +81,12 @@ func (b *Bot) Post(post *Post) error {
 
 func (b *Bot) PostToWebhook(json string) error {
 	if b.WebhookId == "" {
-		return fmt.Errorf("Incoming webhook ID has not been set")
+		return fmt.Errorf("Incoming webhook ID has not been set.")
 	}
 
 	payload := fmt.Sprintf("payload=%s", json)
 	if _, err := b.client.PostToWebhook(b.WebhookId, payload); err != nil {
-		log.Printf("Failed to send a message to : %s\n%v\n", payload, err.Error())
+		log.Printf("Failed to send a message: %v\n", payload, err.Error())
 		return err
 	}
 
@@ -103,12 +97,11 @@ func (b *Bot) Listen() {
 	wsUrl, _ := url.Parse(b.client.Url)
 	wsUrl.Scheme = "ws"
 
-	// Lets start listening to some channels via the websocket!
 	wsClient, err := model.NewWebSocketClient(wsUrl.String(), b.client.AuthToken)
 	if err != nil {
-		log.Fatalf("Failed to connect to the websocket: %v\n", err.Error())
+		log.Fatalf("Failed to connect to the websocket '%s': %v\n", wsUrl.String(), err.Error())
 	} else {
-		log.Printf("Listening to websoket: %v", wsUrl.String())
+		log.Printf("Listening to websocket '%s'\n", wsUrl.String())
 	}
 
 	b.Cron.Start()
@@ -128,7 +121,6 @@ func (b *Bot) Listen() {
 
 	close := make(chan bool, 1)
 
-	// Graceful stop
 	go func() {
 		for _ = range sig {
 			b.Cron.Stop()
@@ -144,8 +136,9 @@ func (b *Bot) Listen() {
 }
 
 func (b *Bot) Register(adaptor BotInterface) {
-	if channelResult, err := b.client.GetChannelByName(adaptor.ChannelName()); err != nil {
-		log.Fatalf("Couldn't get channel '%s': %q\n", adaptor.ChannelName(), err.Error())
+	channelName := strings.ToLower(adaptor.ChannelName())
+	if channelResult, err := b.client.GetChannelByName(channelName); err != nil {
+		log.Fatalf("Couldn't get channel '%s': %v\n", channelName, err.Error())
 	} else {
 		channel := channelResult.Data.(*model.Channel)
 		adaptors := b.adaptors[channel.Id]
@@ -154,28 +147,16 @@ func (b *Bot) Register(adaptor BotInterface) {
 }
 
 func (b *Bot) handleWebsocket(event *model.WebSocketEvent) {
-	// Lets only reponded to message posted events
 	if event.Event != model.WEBSOCKET_EVENT_POSTED {
 		return
 	}
 
 	post := model.PostFromJson(strings.NewReader(event.Data["post"].(string)))
-
-	// Ignore posts from myself
 	if post == nil || post.UserId == b.User.Id {
 		return
 	}
 
-	/*
-		// Ignore posts from webhook
-		if post.Props["from_webhook"] == "true" {
-			return
-		}
-	*/
-
 	var wg sync.WaitGroup
-
-	// Process the post with each adaptors
 	for channelId, adaptors := range b.adaptors {
 		if channelId == post.ChannelId {
 			for _, adaptor := range adaptors {
