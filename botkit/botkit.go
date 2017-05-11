@@ -85,8 +85,7 @@ func (b *Bot) Post(post *Post) error {
 
 func (b *Bot) PostToWebhook(json string) error {
 	if b.WebhookUrl == "" {
-		//return fmt.Errorf("Incoming webhook URL has not been set")
-		log.Fatal("Incoming webhook URL has not been set")
+		return fmt.Errorf("Incoming webhook URL has not been set")
 	}
 
 	payload := fmt.Sprintf("payload=%s", json)
@@ -95,7 +94,6 @@ func (b *Bot) PostToWebhook(json string) error {
 		return err
 	}
 
-	log.Printf("Done: %s\n", payload)
 	return nil
 }
 
