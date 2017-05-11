@@ -21,9 +21,15 @@ func main() {
 	endpoint := os.Getenv("MMBOT_ENDPOINT")
 
 	bot := botkit.NewBot(endpoint, account, password, teamname)
-	bot.WebhookUrl = os.Getenv("MMBOT_WEBHOOK")
+	bot.WebhookId = os.Getenv("MMBOT_WEBHOOK")
 
-	bot.Register(&plugins.PingBot{bot, "bot_dev"})
-	bot.Register(&plugins.PingBot{bot, "off-topic"})
+	if adaptor, _ := plugins.NewPingAdaptor(bot, "bot_dev"); adaptor != nil {
+		bot.Register(adaptor)
+	}
+
+	if adaptor, _ := plugins.NewPingAdaptor(bot, "off-topic"); adaptor != nil {
+		bot.Register(adaptor)
+	}
+
 	bot.Listen()
 }

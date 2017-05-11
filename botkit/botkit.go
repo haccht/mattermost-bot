@@ -13,17 +13,17 @@ import (
 )
 
 type Bot struct {
-	client  *model.Client
-	adaptor map[string][]BotPlugin
+	client   *model.Client
+	adaptors map[string][]BotInterface
 
-	User       *model.User
-	Team       *model.Team
-	WebhookUrl string
+	User      *model.User
+	Team      *model.Team
+	WebhookId string
 }
 
 type Post model.Post
 
-type BotPlugin interface {
+type BotInterface interface {
 	Reply(*Post) error
 	ChannelName() string
 }
@@ -31,7 +31,7 @@ type BotPlugin interface {
 func NewBot(endpoint, account, password, teamname string) *Bot {
 	b := new(Bot)
 	b.client = model.NewClient(endpoint)
-	b.adaptor = map[string][]BotPlugin{}
+	b.adaptors = map[string][]BotInterface{}
 
 	// Ping the server to make sure we can connect.
 	if props, err := b.client.GetPing(); err != nil {
@@ -84,13 +84,13 @@ func (b *Bot) Post(post *Post) error {
 }
 
 func (b *Bot) PostToWebhook(json string) error {
-	if b.WebhookUrl == "" {
-		return fmt.Errorf("Incoming webhook URL has not been set")
+	if b.WebhookId == "" {
+		return fmt.Errorf("Incoming webhook ID has not been set")
 	}
 
 	payload := fmt.Sprintf("payload=%s", json)
-	if _, err := b.client.PostToWebhook(b.WebhookUrl, payload); err != nil {
-		log.Printf("Failed to send a message to webhook: %s\n%v\n", payload, err.Error())
+	if _, err := b.client.PostToWebhook(b.WebhookId, payload); err != nil {
+		log.Printf("Failed to send a message to : %s\n%v\n", payload, err.Error())
 		return err
 	}
 
@@ -117,8 +117,8 @@ func (b *Bot) Listen() {
 	go func() {
 		for {
 			select {
-			case resp := <-wsClient.EventChannel:
-				b.handleWebsocket(resp)
+			case event := <-wsClient.EventChannel:
+				b.handleWebsocket(event)
 			}
 		}
 	}()
@@ -139,13 +139,13 @@ func (b *Bot) Listen() {
 	<-close
 }
 
-func (b *Bot) Register(plugin BotPlugin) {
-	if channelResult, err := b.client.GetChannelByName(plugin.ChannelName()); err != nil {
-		log.Fatalf("Couldn't get channel '%s': %q\n", plugin.ChannelName(), err.Error())
+func (b *Bot) Register(adaptor BotInterface) {
+	if channelResult, err := b.client.GetChannelByName(adaptor.ChannelName()); err != nil {
+		log.Fatalf("Couldn't get channel '%s': %q\n", adaptor.ChannelName(), err.Error())
 	} else {
 		channel := channelResult.Data.(*model.Channel)
-		plugins := b.adaptor[channel.Id]
-		b.adaptor[channel.Id] = append(plugins, plugin)
+		adaptors := b.adaptors[channel.Id]
+		b.adaptors[channel.Id] = append(adaptors, adaptor)
 	}
 }
 
@@ -163,19 +163,19 @@ func (b *Bot) handleWebsocket(event *model.WebSocketEvent) {
 
 	var wg sync.WaitGroup
 
-	// Process the post with each plugins
-	for channelId, plugins := range b.adaptor {
+	// Process the post with each adaptors
+	for channelId, adaptors := range b.adaptors {
 		if channelId == post.ChannelId {
-			for _, plugin := range plugins {
+			for _, adaptor := range adaptors {
 				wg.Add(1)
-				go func(post *model.Post, plugin BotPlugin) {
+				go func(post *model.Post, adaptor BotInterface) {
 					defer wg.Done()
 
-					err := plugin.Reply((*Post)(post))
+					err := adaptor.Reply((*Post)(post))
 					if err != nil {
 						log.Println(err.Error())
 					}
-				}(post, plugin)
+				}(post, adaptor)
 			}
 		}
 	}
