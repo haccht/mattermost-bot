@@ -1,7 +1,7 @@
 package botkit
 
 import (
-	"encoding/json"
+	"fmt"
 	"log"
 	"net/url"
 	"os"
@@ -15,13 +15,17 @@ import (
 type Bot struct {
 	client  *model.Client
 	adaptor map[string][]BotPlugin
-	User    *model.User
-	Team    *model.Team
-	Webhook string
+
+	User       *model.User
+	Team       *model.Team
+	WebhookUrl string
 }
 
+type Post model.Post
+
 type BotPlugin interface {
-	Reply(*model.Post) error
+	Reply(*Post) error
+	ChannelName() string
 }
 
 func NewBot(endpoint, account, password, teamname string) *Bot {
@@ -33,7 +37,7 @@ func NewBot(endpoint, account, password, teamname string) *Bot {
 	if props, err := b.client.GetPing(); err != nil {
 		log.Fatalf("There was a problem pinging the Mattermost server.  Are you sure it's running?: %v\n", err.Error())
 	} else {
-		log.Fatalf("Server detected and is running version %s\n", props["version"])
+		log.Printf("Server detected and is running version %s\n", props["version"])
 	}
 
 	// lets attempt to login to the Mattermost server as the bot user
@@ -69,19 +73,30 @@ func NewBot(endpoint, account, password, teamname string) *Bot {
 	return b
 }
 
-func (b *Bot) Say(m map[string]string) {
-	if b.Webhook == nil {
-		rawdata := map[string]string{"payload": m}
-		payload := json.Marshal(rawdata)
-
-		if _, err := b.client.PostWebhook(b.Webhook, m.ToJson); err != nil {
-			log.Printf("Failed to send a message: %v\n", err.Error())
-		}
-	} else {
-		if _, err := b.client.CreatePost(post); err != nil {
-			log.Printf("Failed to send a message: %v\n", err.Error())
-		}
+func (b *Bot) Post(post *Post) error {
+	new_post := (*model.Post)(post)
+	if _, err := b.client.CreatePost(new_post); err != nil {
+		log.Printf("Failed to send a message: %v\n", err.Error())
+		return err
 	}
+
+	return nil
+}
+
+func (b *Bot) PostToWebhook(json string) error {
+	if b.WebhookUrl == "" {
+		//return fmt.Errorf("Incoming webhook URL has not been set")
+		log.Fatal("Incoming webhook URL has not been set")
+	}
+
+	payload := fmt.Sprintf("payload=%s", json)
+	if _, err := b.client.PostToWebhook(b.WebhookUrl, payload); err != nil {
+		log.Printf("Failed to send a message to webhook: %s\n%v\n", payload, err.Error())
+		return err
+	}
+
+	log.Printf("Done: %s\n", payload)
+	return nil
 }
 
 func (b *Bot) Listen() {
@@ -92,6 +107,8 @@ func (b *Bot) Listen() {
 	wsClient, err := model.NewWebSocketClient(wsUrl.String(), b.client.AuthToken)
 	if err != nil {
 		log.Fatalf("Failed to connect to the websocket: %v\n", err.Error())
+	} else {
+		log.Printf("Listening to websoket: %v", wsUrl.String())
 	}
 
 	wsClient.Listen()
@@ -124,9 +141,9 @@ func (b *Bot) Listen() {
 	<-close
 }
 
-func (b *Bot) Register(plugin BotPlugin, channelName string) {
-	if channelResult, err := b.client.GetChannelByName(channelName); err != nil {
-		log.Fatalf("Couldn't get channel '%s': %q\n", channelName, err.Error())
+func (b *Bot) Register(plugin BotPlugin) {
+	if channelResult, err := b.client.GetChannelByName(plugin.ChannelName()); err != nil {
+		log.Fatalf("Couldn't get channel '%s': %q\n", plugin.ChannelName(), err.Error())
 	} else {
 		channel := channelResult.Data.(*model.Channel)
 		plugins := b.adaptor[channel.Id]
@@ -156,7 +173,7 @@ func (b *Bot) handleWebsocket(event *model.WebSocketEvent) {
 				go func(post *model.Post, plugin BotPlugin) {
 					defer wg.Done()
 
-					err := plugin.Reply(post)
+					err := plugin.Reply((*Post)(post))
 					if err != nil {
 						log.Println(err.Error())
 					}
