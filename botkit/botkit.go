@@ -10,28 +10,30 @@ import (
 	"sync"
 
 	"github.com/mattermost/platform/model"
+	"github.com/robfig/cron"
 )
 
 type Bot struct {
-	client   *model.Client
-	adaptors map[string][]BotInterface
-
+	client    *model.Client
+	adaptors  map[string][]BotInterface
+	Cron      *cron.Cron
 	User      *model.User
 	Team      *model.Team
 	WebhookId string
 }
-
-type Post model.Post
 
 type BotInterface interface {
 	Reply(*Post) error
 	ChannelName() string
 }
 
+type Post model.Post
+
 func NewBot(endpoint, account, password, teamname string) *Bot {
 	b := new(Bot)
 	b.client = model.NewClient(endpoint)
 	b.adaptors = map[string][]BotInterface{}
+	b.Cron = cron.New()
 
 	// Ping the server to make sure we can connect.
 	if props, err := b.client.GetPing(); err != nil {
@@ -109,6 +111,7 @@ func (b *Bot) Listen() {
 		log.Printf("Listening to websoket: %v", wsUrl.String())
 	}
 
+	b.Cron.Start()
 	wsClient.Listen()
 
 	sig := make(chan os.Signal, 1)
@@ -128,6 +131,7 @@ func (b *Bot) Listen() {
 	// Graceful stop
 	go func() {
 		for _ = range sig {
+			b.Cron.Stop()
 			if wsClient != nil {
 				wsClient.Close()
 			}
@@ -155,11 +159,21 @@ func (b *Bot) handleWebsocket(event *model.WebSocketEvent) {
 		return
 	}
 
-	// Ignore self posted events
 	post := model.PostFromJson(strings.NewReader(event.Data["post"].(string)))
+
+	// Ignore posts from myself
 	if post == nil || post.UserId == b.User.Id {
 		return
 	}
+
+	/*
+		// Ignore posts from webhook
+		if post.Props["from_webhook"] == "true" {
+			return
+		}
+	*/
+
+	fmt.Println(post.ToJson())
 
 	var wg sync.WaitGroup
 

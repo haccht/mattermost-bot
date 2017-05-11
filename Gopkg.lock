@@ -1,4 +1,4 @@
-memo = "33b7389305bb154fa097e7509feafea3faab94d25812440a4546ef97b46b9b66"
+memo = "bd41a44851717738359aed29ed83bfb5675c6a4c4b3edde266d3111c6ccc6fc5"
 
 [[projects]]
   branch = "master"
@@ -47,6 +47,12 @@ memo = "33b7389305bb154fa097e7509feafea3faab94d25812440a4546ef97b46b9b66"
   packages = ["."]
   revision = "13d49d4606eb801b8f01ae542b4afc4c6ee3d84a"
   version = "v0.5.0"
+
+[[projects]]
+  name = "github.com/robfig/cron"
+  packages = ["."]
+  revision = "b024fc5ea0e34bc3f83d9941c8d60b0622bfaca4"
+  version = "v1"
 
 [[projects]]
   branch = "master"
