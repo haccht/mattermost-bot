@@ -70,7 +70,7 @@ memo = "59a3a60c9a39422dca773bc14fff07f5e118025d78bccb2d1e5b2be04e68f179"
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["bcrypt","blowfish"]
-  revision = "122d919ec1efcfb58483215da23f815853e24b81"
+  revision = "ab89591268e0c8b748cbe4047b00197516011af5"
 
 [[projects]]
   branch = "v2"
