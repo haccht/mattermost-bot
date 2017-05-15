@@ -24,6 +24,6 @@ func main() {
 	bot := mmbot.NewBotKit(endpoint, account, password, teamname)
 	bot.WebhookId = os.Getenv("MMBOT_WEBHOOK")
 
-	bot.AddPlugin("Bot_dev", &ping.PingPlugin{})
+	bot.AddPlugin("Bot_dev", &ping.Plugin{})
 	bot.Run()
 }

@@ -8,14 +8,15 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 
 	"github.com/mattermost/platform/model"
 )
 
 type BotKit struct {
 	client  *model.Client
-	plugins *PluginManager
 	memory  *Memory
+	plugins map[string][]Plugin
 
 	User      *model.User
 	Team      *model.Team
@@ -26,8 +27,13 @@ func NewBotKit(endpoint, account, password, teamname string) *BotKit {
 	b := new(BotKit)
 
 	b.client = model.NewClient(endpoint)
-	b.plugins = NewPluginManager(b)
-	b.memory, _ = NewMemory()
+	b.plugins = map[string][]Plugin{}
+
+	if memory, err := NewMemory(); err != nil {
+		log.Fatalf("We failed to open memory: %v", err.Error())
+	} else {
+		b.memory = memory
+	}
 
 	// confirm the mattermost server is alive
 	if props, err := b.client.GetPing(); err != nil {
@@ -79,20 +85,14 @@ func (b *BotKit) SendMessage(text, channel, username, iconUrl string) error {
 		}
 
 		post := &model.Post{Message: text, ChannelId: ch.Id}
-		err := b.SendMessageWithAPI(post)
-		return err
-	}
-
-	// default username is the bot user's name logging in.
-	if username == "" {
-		username = b.User.Username
+		return b.SendMessageWithAPI(post)
 	}
 
 	// build message
-	message := map[string]string{"text": text, "username": username}
+	message := map[string]string{"text": text, "channel": channel, "username": b.User.Username}
 
-	if channel != "" {
-		message["channel"] = channel
+	if username == "" {
+		message["username"] = username
 	}
 
 	if iconUrl != "" {
@@ -100,9 +100,10 @@ func (b *BotKit) SendMessage(text, channel, username, iconUrl string) error {
 	}
 
 	// send message with incoming webhook
-	payload, _ := json.Marshal(map[string]map[string]string{"payload": message})
-	if _, err := b.client.PostToWebhook(b.WebhookId, string(payload)); err != nil {
-		return fmt.Errorf("Failed to send a message: %v", payload, err.Error())
+	payload, _ := json.Marshal(message)
+	content := fmt.Sprintf("payload=%s", string(payload))
+	if _, err := b.client.PostToWebhook(b.WebhookId, content); err != nil {
+		return fmt.Errorf("We failed to send a message: %v", payload, err.Error())
 	}
 
 	return nil
@@ -111,7 +112,7 @@ func (b *BotKit) SendMessage(text, channel, username, iconUrl string) error {
 func (b *BotKit) SendMessageWithAPI(post *model.Post) error {
 	// send message with api driver
 	if _, err := b.client.CreatePost(post); err != nil {
-		return fmt.Errorf("Failed to send a message with api driver: %v", err.Error())
+		return fmt.Errorf("We failed to send a message with api driver: %v", err.Error())
 	}
 
 	return nil
@@ -124,7 +125,7 @@ func (b *BotKit) Run() {
 	// start listening to websocket
 	wsClient, err := model.NewWebSocketClient(wsUrl.String(), b.client.AuthToken)
 	if err != nil {
-		log.Fatalf("Failed to connect to the websocket '%s': %v\n", wsUrl.String(), err.Error())
+		log.Fatalf("We failed to connect to the websocket '%s': %v\n", wsUrl.String(), err.Error())
 	} else {
 		log.Printf("Listening to websocket '%s'\n", wsUrl.String())
 	}
@@ -157,10 +158,9 @@ func (b *BotKit) Run() {
 	<-close
 }
 
-func (b *BotKit) AddPlugin(channel string, plugin *BotPlugin) error {
-	log.Printf("Add plugin '%v' to channel '%s'", plugin, channel)
-	b.plugins.Add(channel, plugin)
-	return nil
+func (b *BotKit) AddPlugin(channel string, plugin Plugin) {
+	lowerChannel := strings.ToLower(channel)
+	b.plugins[lowerChannel] = append(b.plugins[lowerChannel], plugin)
 }
 
 func (b *BotKit) handleWebsocketEvent(event *model.WebSocketEvent) {
@@ -179,31 +179,45 @@ func (b *BotKit) handleWebsocketEvent(event *model.WebSocketEvent) {
 	var text, username, channel string
 
 	botName = b.User.Username
-	botLinkedName = fmt.Sprintf("<!%s>", b.User.Username)
+	botLinkedName = fmt.Sprintf("@%s", b.User.Username)
 
 	// ignore unless the post begins with the bot name or bot linked name
 	switch {
 	case strings.HasPrefix(post.Message, botName):
-		text = post.Message[len(botName):]
+		text = strings.TrimSpace(post.Message[len(botName):])
 	case strings.HasPrefix(post.Message, botLinkedName):
-		text = post.Message[len(botLinkedName):]
+		text = strings.TrimSpace(post.Message[len(botLinkedName):])
 	default:
 		return
 	}
 
 	if result, err := b.client.GetChannel(post.ChannelId, ""); err != nil {
+		log.Printf("cannnot get channel by id: %s\n", post.ChannelId)
 		return
 	} else {
-		ch := result.Data.(*model.Channel)
-		channel = ch.Name
+		channelData := result.Data.(*model.ChannelData)
+		channel = channelData.Channel.Name
 	}
 
 	if result, err := b.client.GetUser(post.UserId, ""); err != nil {
+		log.Printf("cannnot get user by id: %s\n", post.UserId)
 		return
 	} else {
 		user := result.Data.(*model.User)
 		username = user.Username
 	}
 
-	b.plugins.HandleMessage(text, username, channel)
+	wg := &sync.WaitGroup{}
+	for key, plugins := range b.plugins {
+		if key == channel {
+			for _, plugin := range plugins {
+				wg.Add(1)
+				go func(p Plugin) {
+					defer wg.Done()
+					p.HandleMessage(b, text, channel, username)
+				}(plugin)
+			}
+		}
+	}
+	wg.Wait()
 }

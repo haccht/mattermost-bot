@@ -30,10 +30,8 @@ func NewMemory() (*Memory, error) {
 	return &Memory{db}, nil
 }
 
-func (m *Memory) Get(plugin BotPlugin, key string) (string, error) {
-	pluginType := reflect.TypeOf(plugin)
-
-	ns_key := fmt.Sprintf("%s:%s:%s", pluginType.PkgPath, pluginType.Name, key)
+func (m *Memory) Get(plugin Plugin, key string) (string, error) {
+	ns_key := m.ns_key(key, plugin)
 	if val, err := m.db.Get([]byte(ns_key), nil); err != nil {
 		return "", err
 	} else {
@@ -41,13 +39,16 @@ func (m *Memory) Get(plugin BotPlugin, key string) (string, error) {
 	}
 }
 
-func (m *Memory) Put(plugin BotPlugin, key string, val string) error {
-	pluginType := reflect.TypeOf(plugin)
-
-	ns_key := fmt.Sprintf("%s:%s:%s", pluginType.PkgPath, pluginType.Name, key)
+func (m *Memory) Put(plugin Plugin, key string, val string) error {
+	ns_key := m.ns_key(key, plugin)
 	if err := m.db.Put([]byte(ns_key), []byte(val), nil); err != nil {
 		return err
 	} else {
 		return nil
 	}
+}
+
+func (m *Memory) ns_key(key string, plugin Plugin) string {
+	pluginType := reflect.TypeOf(plugin)
+	return fmt.Sprintf("%s:%s:%s", pluginType.PkgPath, pluginType.Name, key)
 }
