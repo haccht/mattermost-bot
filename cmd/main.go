@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"mattermost-bot"
+	"mattermost-bot/plugins/batch"
 	"mattermost-bot/plugins/cron"
 	"mattermost-bot/plugins/echo"
 	"mattermost-bot/plugins/help"
@@ -27,6 +28,7 @@ func main() {
 	bot := mmbot.NewBotKit(endpoint, account, password, teamname)
 	bot.WebhookId = os.Getenv("MMBOT_WEBHOOK")
 
+	bot.AddPlugin(batch.NewPlugin(bot))
 	bot.AddPlugin(cron.NewPlugin(bot))
 	bot.AddPlugin(echo.NewPlugin(bot))
 	bot.AddPlugin(help.NewPlugin(bot))
