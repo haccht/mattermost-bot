@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/joho/godotenv"
 	"github.com/mattermost/platform/model"
 )
 
@@ -21,19 +22,29 @@ type Plugin interface {
 type BotKit struct {
 	client  *model.Client
 	plugins []Plugin
+	webhook string
 
-	User      *model.User
-	Team      *model.Team
-	Channels  []*model.Channel
-	Memory    *Memory
-	WebhookId string
+	User     *model.User
+	Team     *model.Team
+	Channels []*model.Channel
+	Memory   *Memory
 }
 
-func NewBotKit(endpoint, account, password, teamname string) *BotKit {
-	b := new(BotKit)
+func NewBotKit() *BotKit {
+	if err := godotenv.Load(); err != nil {
+		log.Println("Error loading .env file")
+	}
 
+	webhook := os.Getenv("MMBOT_WEBHOOK")
+	account := os.Getenv("MMBOT_ACCOUNT")
+	password := os.Getenv("MMBOT_PASSWORD")
+	teamname := os.Getenv("MMBOT_TEAMNAME")
+	endpoint := os.Getenv("MMBOT_ENDPOINT")
+
+	b := new(BotKit)
 	b.client = model.NewClient(endpoint)
 	b.plugins = []Plugin{}
+	b.webhook = webhook
 
 	// open leveldb
 	if memory, err := NewMemory(); err != nil {
@@ -90,7 +101,7 @@ func NewBotKit(endpoint, account, password, teamname string) *BotKit {
 
 func (b *BotKit) SendMessage(text, channel, username, iconUrl string) error {
 	// if the webhook id is not specified, bot will try to send message with api driver
-	if b.WebhookId == "" {
+	if b.webhook == "" {
 		log.Println("Incoming Webhook ID is not set. Try to send message with API driver.")
 
 		var ch *model.Channel
@@ -119,7 +130,7 @@ func (b *BotKit) SendMessage(text, channel, username, iconUrl string) error {
 	// send message with incoming webhook
 	payload, _ := json.Marshal(message)
 	content := fmt.Sprintf("payload=%s", string(payload))
-	if _, err := b.client.PostToWebhook(b.WebhookId, content); err != nil {
+	if _, err := b.client.PostToWebhook(b.webhook, content); err != nil {
 		return fmt.Errorf("We failed to send a message: %v", payload, err.Error())
 	}
 
